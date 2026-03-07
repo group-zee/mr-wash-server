@@ -27,7 +27,7 @@ It employs a hybrid database strategy: MongoDB for adaptable schema data and Pos
 ### Coding Standards
 - **Commits**: Must follow conventional commits (`feat:`, `fix:`, `refactor:`, `docs:`).
 - **Code Formatting**: Prettier and EditorConfig are strictly enforced.
-- **Branching**: `main` is for production, `develop` is the primary integration branch. Feature branches should be branched from `develop` (`feature/*`).
+- **Branching**: `main` is for production, `dev` is the primary integration branch. Feature branches should be branched from `dev` (`feature/*`).
 
 ## Running Locally
 For local development, each service has its own `Dockerfile` and `docker-compose.yml` can be used to boot the entire cluster.
