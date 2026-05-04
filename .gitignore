@@ -111,3 +111,5 @@ Thumbs.db
 .vscode/
 *.swp
 *.swo
+
+/src/generated/prisma
