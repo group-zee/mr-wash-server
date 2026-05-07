@@ -6,7 +6,7 @@ export interface ICustomerDocument extends Document, Omit<Customer, 'id'> {}
 const CustomerSchema: Schema = new Schema(
   {
     firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
+    lastName: { type: String, default: '' },
     email: { type: String, required: true, unique: true },
     phoneNumber: { type: String, required: true, unique: true },
     passwordHash: { type: String, required: true },

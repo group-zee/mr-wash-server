@@ -10,6 +10,7 @@ export enum ResponseMessages {
   INVALID_OTP = 'Invalid OTP',
   CUSTOMER_NOT_FOUND = 'Customer not found',
   PASSWORD_REQUIRED = 'Password is required for login',
+  LOGOUT_SUCCESS = 'Logout successful',
 
   // General Status
   SUCCESS = 'success',

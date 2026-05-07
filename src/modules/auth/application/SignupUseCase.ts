@@ -17,14 +17,14 @@ export class SignupUseCase {
   constructor(private readonly customerRepository: ICustomerRepository) {}
 
   public async execute(data: SignupDTO): Promise<Customer> {
-    const existingByEmail = await this.customerRepository.findByEmail(data.email);
-    if (existingByEmail) {
-      throw new AppError(ResponseMessages.EMAIL_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
-    }
-
     const existingByPhone = await this.customerRepository.findByPhoneNumber(data.phoneNumber);
     if (existingByPhone) {
       throw new AppError(ResponseMessages.PHONE_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
+    }
+
+    const existingByEmail = await this.customerRepository.findByEmail(data.email);
+    if (existingByEmail) {
+      throw new AppError(ResponseMessages.EMAIL_ALREADY_REGISTERED, HttpStatus.BAD_REQUEST);
     }
 
     const salt = await bcrypt.genSalt(10);

@@ -1,35 +1,74 @@
 import { ICustomerRepository } from '../../customer/domain/ICustomerRepository';
+import { IVendorRepository } from '../../vendor/domain/IVendorRepository';
+import { IOTPRepository } from '../domain/IOTPRepository';
 import { AppError } from '../../../shared/errors/AppError';
-import { generateToken } from '../../../shared/utils/jwt';
+import { generateAccessToken, generateRefreshToken } from '../../../shared/utils/jwt';
 import { HttpStatus } from '../../../shared/constants/HttpStatus';
 import { ResponseMessages } from '../../../shared/constants/ResponseMessages';
 
 export interface VerifyOTPDTO {
   phoneNumber: string;
   otp: string;
+  userType?: 'customer' | 'vendor'; // Optional: if provided, check only that repo
 }
 
 export class VerifyOTPUseCase {
-  constructor(private readonly customerRepository: ICustomerRepository) {}
+  constructor(
+    private readonly customerRepository: ICustomerRepository,
+    private readonly vendorRepository: IVendorRepository,
+    private readonly otpRepository: IOTPRepository
+  ) {}
 
-  public async execute(data: VerifyOTPDTO): Promise<{ message: string; token?: string }> {
-    // In a real application, you would verify the OTP against Redis or an OTP service
-    // For this demonstration, we'll hardcode OTP '1234' for success.
-    if (data.otp !== '1234') {
+  public async execute(data: VerifyOTPDTO): Promise<{ message: string; accessToken: string; refreshToken: string; user: any; type: string }> {
+    const isValid = await this.otpRepository.verify(data.phoneNumber, data.otp);
+    
+    if (!isValid) {
       throw new AppError(ResponseMessages.INVALID_OTP, HttpStatus.BAD_REQUEST);
     }
 
-    const customer = await this.customerRepository.findByPhoneNumber(data.phoneNumber);
-    if (!customer) {
-      throw new AppError(ResponseMessages.CUSTOMER_NOT_FOUND, HttpStatus.NOT_FOUND);
+    let user: any = null;
+    let type = '';
+
+    // Check customer if not explicitly vendor
+    if (data.userType !== 'vendor') {
+      user = await this.customerRepository.findByPhoneNumber(data.phoneNumber);
+      if (user) type = 'customer';
     }
 
-    if (!customer.isVerified) {
-      await this.customerRepository.update(customer.id, { isVerified: true });
+    // Check vendor if not found as customer or explicitly vendor
+    if (!user && data.userType !== 'customer') {
+      user = await this.vendorRepository.findByPhoneNumber(data.phoneNumber);
+      if (user) type = 'vendor';
     }
 
-    const token = generateToken({ id: customer.id, role: 'customer' });
+    if (!user) {
+      throw new AppError('User not found', HttpStatus.NOT_FOUND);
+    }
 
-    return { message: ResponseMessages.OTP_VERIFIED_SUCCESS, token };
+    // Verify user
+    if (!user.isVerified) {
+      if (type === 'customer') {
+        await this.customerRepository.update(user.id, { isVerified: true });
+      } else {
+        await this.vendorRepository.update(user.id, { isVerified: true });
+      }
+    }
+
+    // Clear OTP after successful verification
+    await this.otpRepository.delete(data.phoneNumber);
+
+    const payload = { id: user.id, role: type };
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = generateRefreshToken(payload);
+
+    const { passwordHash, ...userData } = user as any;
+
+    return { 
+      message: ResponseMessages.OTP_VERIFIED_SUCCESS, 
+      accessToken, 
+      refreshToken, 
+      user: { ...userData, role: type },
+      type
+    };
   }
 }
